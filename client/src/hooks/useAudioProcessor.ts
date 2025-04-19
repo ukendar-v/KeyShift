@@ -159,74 +159,128 @@ const useAudioProcessor = () => {
     }
   }, [audioContext, originalBuffer, preserveTempo, audioQuality]);
   
-  // Play audio
+  // Play audio with improved functionality
   const playAudio = useCallback((semitones: number) => {
     if (!audioContext || !audioBuffer) return;
     
-    // Stop any playing audio
-    if (sourceNode.current) {
-      sourceNode.current.stop();
-      sourceNode.current = null;
-    }
-    
-    // Create new source node
-    sourceNode.current = audioContext.createBufferSource();
-    sourceNode.current.buffer = audioBuffer;
-    
-    // Create gain node if it doesn't exist
-    if (!gainNode.current) {
-      gainNode.current = audioContext.createGain();
-      gainNode.current.connect(audioContext.destination);
-    }
-    
-    // Connect nodes
-    sourceNode.current.connect(gainNode.current);
-    
-    // Resume audio context if suspended
-    if (audioContext.state === 'suspended') {
-      audioContext.resume();
-    }
-    
-    // Calculate startTime
-    if (pausedAt.current) {
-      startTime.current = audioContext.currentTime - pausedAt.current;
-    } else {
+    try {
+      // Stop any playing audio
+      if (sourceNode.current) {
+        try {
+          sourceNode.current.stop();
+        } catch (e) {
+          console.log('Source node already stopped');
+        }
+        sourceNode.current.disconnect();
+        sourceNode.current = null;
+      }
+      
+      // Resume audio context if suspended
+      if (audioContext.state === 'suspended') {
+        audioContext.resume();
+      }
+      
+      // Create new source node
+      sourceNode.current = audioContext.createBufferSource();
+      sourceNode.current.buffer = audioBuffer;
+      
+      // Apply tempo preservation if enabled
+      if (semitones !== 0) {
+        const pitchRatio = Math.pow(2, semitones / 12);
+        if (preserveTempo) {
+          // Preserve tempo by adjusting playback rate to counteract the pitch shift
+          sourceNode.current.playbackRate.value = pitchRatio;
+        }
+      }
+      
+      // Create gain node if it doesn't exist
+      if (!gainNode.current) {
+        gainNode.current = audioContext.createGain();
+        gainNode.current.connect(audioContext.destination);
+      }
+      
+      // Connect nodes
+      sourceNode.current.connect(gainNode.current);
+      
+      // Set start time reference for progress tracking
       startTime.current = audioContext.currentTime;
+      
+      // Start playback from the desired position
+      sourceNode.current.start(0, pausedAt.current);
+      
+      // Add ended event listener to handle playback completion
+      sourceNode.current.onended = () => {
+        console.log('Playback ended naturally');
+        if (sourceNode.current) {
+          sourceNode.current.disconnect();
+          sourceNode.current = null;
+        }
+      };
+    } catch (error) {
+      console.error('Error during audio playback:', error);
     }
-    
-    // Start playback
-    sourceNode.current.start(0, pausedAt.current);
-    
-  }, [audioContext, audioBuffer]);
+  }, [audioContext, audioBuffer, preserveTempo]);
   
-  // Stop audio
+  // Stop audio with improved cleanup
   const stopAudio = useCallback(() => {
     if (sourceNode.current) {
-      sourceNode.current.stop();
-      sourceNode.current = null;
-      
-      // Store the current position
-      if (audioContext) {
-        pausedAt.current = audioContext.currentTime - startTime.current;
+      try {
+        // Store the current position before stopping
+        if (audioContext) {
+          const currentTime = audioContext.currentTime - startTime.current;
+          pausedAt.current = currentTime < 0 ? 0 : currentTime;
+          
+          // Make sure we don't go beyond the duration
+          if (audioBuffer && pausedAt.current > audioBuffer.duration) {
+            pausedAt.current = 0; // If we're at the end, reset to beginning
+          }
+        }
+        
+        // Stop the source node
+        sourceNode.current.stop();
+        sourceNode.current.disconnect();
+        sourceNode.current = null;
+      } catch (error) {
+        console.log('Error stopping audio:', error);
+        // Even if stopping fails, clean up the reference
+        sourceNode.current = null;
       }
-    }
-  }, [audioContext]);
-  
-  // Get current playback time
-  const currentPlaybackTime = useCallback(() => {
-    if (!audioContext) return pausedAt.current;
-    
-    if (sourceNode.current) {
-      const currentTime = audioContext.currentTime - startTime.current;
-      // Make sure we don't return a time greater than the duration
-      if (audioBuffer && currentTime > audioBuffer.duration) {
-        return audioBuffer.duration;
-      }
-      return currentTime;
-    } else {
-      return pausedAt.current;
     }
   }, [audioContext, audioBuffer]);
+  
+  // Get current playback time with improved accuracy
+  const currentPlaybackTime = useCallback(() => {
+    if (!audioContext || !audioBuffer) return pausedAt.current;
+    
+    // If we're actively playing
+    if (sourceNode.current) {
+      // Calculate current time based on audio context time
+      let currentTime = audioContext.currentTime - startTime.current;
+      
+      // Apply playback rate adjustment for accurate time display if preserving tempo
+      if (preserveTempo && sourceNode.current.playbackRate.value !== 1) {
+        currentTime *= sourceNode.current.playbackRate.value;
+      }
+      
+      // Ensure time doesn't exceed duration or go below 0
+      if (currentTime > audioBuffer.duration) {
+        return audioBuffer.duration;
+      } else if (currentTime < 0) {
+        return 0;
+      }
+      
+      return currentTime;
+    } else {
+      // Ensure stored position is valid
+      if (pausedAt.current > audioBuffer.duration) {
+        pausedAt.current = audioBuffer.duration;
+      } else if (pausedAt.current < 0) {
+        pausedAt.current = 0;
+      }
+      
+      return pausedAt.current;
+    }
+  }, [audioContext, audioBuffer, preserveTempo]);
   
   // Reset playback position
   const resetPlayback = useCallback(() => {

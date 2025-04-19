@@ -81,18 +81,26 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioFile, onReset }) => {
   }, [isPlaying, currentPlaybackTime, duration, stopAudio]);
 
   const togglePlayback = () => {
+    // If playing, stop playback
     if (isPlaying) {
       stopAudio();
       setIsPlaying(false);
-    } else {
-      // If we've reached the end, start from the beginning
+      return;
+    }
+    
+    // Otherwise, start playback
+    if (audioContext && audioBuffer) {
+      // If we reached the end or almost at the end, reset to beginning
       if (currentTime >= duration - 0.1) {
         pausedAt.current = 0;
         setCurrentTime(0);
       }
       
-      playAudio(semitones);
-      setIsPlaying(true);
+      // Short delay to ensure UI updates before playback
+      setTimeout(() => {
+        playAudio(semitones);
+        setIsPlaying(true);
+      }, 50);
     }
   };
 
@@ -135,27 +143,38 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioFile, onReset }) => {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
+  // Reset to beginning and play button
   const skipBackward = () => {
-    if (audioContext) {
-      stopAudio();
-      setIsPlaying(false);
+    if (audioContext && audioBuffer) {
+      // Stop current playback and reset to beginning
+      if (isPlaying) {
+        stopAudio();
+      }
+      
+      // Reset position
       setCurrentTime(0);
       pausedAt.current = 0;
       
+      // Start playback from beginning after a short delay
       setTimeout(() => {
         playAudio(semitones);
         setIsPlaying(true);
-      }, 100);
+      }, 50);
     }
   };
 
-  // Skip forward is now a reset function
+  // Reset to end button - stops playback and resets position
   const skipForward = () => {
-    if (audioContext && duration) {
-      stopAudio();
-      setIsPlaying(false);
+    if (audioContext && audioBuffer && duration) {
+      // Stop current playback
+      if (isPlaying) {
+        stopAudio();
+      }
+      
+      // Reset position to beginning
       setCurrentTime(0);
       pausedAt.current = 0;
+      setIsPlaying(false);
     }
   };
 
@@ -193,15 +212,28 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioFile, onReset }) => {
           <div 
             className="h-2 bg-zinc-700 rounded-full overflow-hidden cursor-pointer"
             onClick={(e) => {
-              if (audioBuffer) {
+              if (audioBuffer && duration > 0) {
+                // Calculate click position as percentage of scrubber width
                 const rect = e.currentTarget.getBoundingClientRect();
-                const clickPos = (e.clientX - rect.left) / rect.width;
-                const newTime = clickPos * duration;
-                setCurrentTime(newTime);
-                pausedAt.current = newTime;
+                const clickPos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                
+                // Convert to time value (clamped to valid range)
+                const newTime = Math.max(0, Math.min(duration, clickPos * duration));
+                
+                // Stop current playback
                 if (isPlaying) {
                   stopAudio();
-                  playAudio(semitones);
+                }
+                
+                // Update position
+                setCurrentTime(newTime);
+                pausedAt.current = newTime;
+                
+                // Restart from new position if we were playing
+                if (isPlaying) {
+                  setTimeout(() => {
+                    playAudio(semitones);
+                  }, 50);
                 }
               }
             }}
