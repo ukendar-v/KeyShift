@@ -1,0 +1,137 @@
+Mobile MP3 Pitch & Key Shifter Web App
+💡 Overview:
+
+Build a lightweight, mobile-optimized web application that allows users to upload an .mp3 file, automatically detects the key and pitch of the song, and provides an intuitive interface to adjust the key (transpose it up or down in semitone increments). Users should then be able to play back the file in the adjusted key.
+
+The app must run smoothly on mobile devices with low latency, and have a minimal, clean, and custom-designed interface.
+
+🔁 User Journey:
+User lands on a simple, inviting landing page.
+
+Clean headline: “Upload a Song. Change Its Key. Hear the Difference.”
+
+Subtext: “No account needed. Works right from your phone.”
+
+User uploads an MP3 file.
+
+Visible upload zone with drag & drop OR file select.
+
+Only .mp3 files accepted.
+
+Once uploaded:
+
+The filename is shown.
+
+A spinner or animated progress indicator shows the file is being analyzed.
+
+Pitch/Key Detection
+
+Use a lightweight in-browser pitch/key detection library.
+
+Once complete:
+
+Show the detected key and pitch range (e.g., “Key: A Minor”, “Vocal Range: C3–G5”).
+
+Optional: Display a visual waveform or frequency map.
+
+Key Adjustment Interface
+
+Present a simple slider or +/- buttons:
+
+Label: “Change Key by Semitones”
+
+Range: -6 to +6 (adjustable)
+
+Display the new transposed key dynamically as the user changes the semitone.
+
+User can preview by tapping “Play in new key.”
+
+Playback
+
+Once transposition is chosen:
+
+The app should reprocess the audio and allow smooth playback.
+
+Include Play / Pause buttons with a simple progress bar.
+
+Ensure minimal playback lag using the Web Audio API or similar in-browser library.
+
+Mobile Performance
+
+App must work fully offline after the first load (Service Worker optional for MVP).
+
+Design must be thumb-friendly: large buttons, minimal clutter, fast load times.
+
+🧱 Tech Stack:
+Frontend
+
+HTML, CSS (use Tailwind CSS or custom media-query-based styling)
+
+JavaScript (Vanilla or minimal framework)
+
+Optional: Svelte or React if you want component structure, but aim for speed
+
+Audio Processing
+
+Use Web Audio API for audio playback and pitch shifting
+
+Libraries to consider:
+
+pitchfinder: for pitch detection
+
+Essentia.js: more accurate pitch/key detection
+
+Tone.js: for key shifting and playback control
+
+soundtouch.js: for pitch/speed manipulation without affecting tempo
+
+Optional Backend (if needed for heavy processing)
+
+Python Flask API (lightweight)
+
+Use librosa or pyDub for backend pitch shifting
+
+But aim to do everything in-browser for speed and responsiveness
+
+🧩 Features to Implement
+
+Feature	Requirement
+Upload MP3	Drag & drop or mobile file selector
+File Validation	Only accept .mp3 files
+Pitch & Key Detection	Auto detect and display after upload
+Key Shifting Control	Slider or buttons to shift by -6 to +6 semitones
+Audio Playback	Smooth play/pause in original or shifted key
+Playback Progress Bar	Optional but helps for user control
+Visual Feedback	Show detected pitch, transposed key, and a responsive waveform (optional)
+Custom UI	Clean layout, large touch areas, no default browser styles
+Mobile Responsiveness	Works well on iOS Safari and Android Chrome
+Fast Load Time	Minimal JS bundle, compressed assets
+📁 Files You’ll Need
+index.html – HTML structure
+
+style.css – All mobile-first styles and transitions
+
+script.js – Handles:
+
+File upload
+
+Pitch detection
+
+Key shifting
+
+Playback controls
+
+libs/ – Any client-side audio libraries used
+
+(Optional) server.py (if doing backend processing)
+
+🧼 Design Goals
+Flat, minimal UI — lots of whitespace, no shadows, gentle animations
+
+Dark/light mode toggle (optional MVP+)
+
+Large rounded buttons (mobile touch-friendly)
+
+Font suggestion: Inter, Roboto, or DM Sans from Google Fonts
+
+Compress all assets and defer heavy JS loads until after user interaction
