@@ -61,7 +61,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioFile, onReset }) => {
         const currentPlaybackTimeValue = currentPlaybackTime();
         setCurrentTime(currentPlaybackTimeValue);
         
-        // Stop playback when audio reaches the end
+        // Reset playback when audio reaches the end so it can be played again
         if (duration > 0 && currentPlaybackTimeValue >= duration - 0.1) {
           stopAudio();
           setIsPlaying(false);
@@ -134,6 +134,8 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioFile, onReset }) => {
       stopAudio();
       setIsPlaying(false);
       setCurrentTime(0);
+      pausedAt.current = 0;
+      
       setTimeout(() => {
         playAudio(semitones);
         setIsPlaying(true);
@@ -141,11 +143,13 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioFile, onReset }) => {
     }
   };
 
+  // Skip forward is now a reset function
   const skipForward = () => {
     if (audioContext && duration) {
       stopAudio();
       setIsPlaying(false);
       setCurrentTime(0);
+      pausedAt.current = 0;
     }
   };
 

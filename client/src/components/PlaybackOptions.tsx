@@ -74,9 +74,9 @@ const PlaybackOptions: React.FC<PlaybackOptionsProps> = ({
                 button.innerHTML = originalContent;
               }, 1000);
               
-            } catch (error) {
+            } catch (error: any) {
               console.error('Error exporting audio:', error);
-              alert(`Error creating download: ${error.message}`);
+              alert(`Error creating download: ${error.message || 'Unknown error'}`);
             }
           }}
         >
