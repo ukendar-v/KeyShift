@@ -179,9 +179,9 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioFile, onReset }) => {
   };
 
   return (
-    <div>
+    <div className="space-y-4">
       {/* File Info & Player */}
-      <div className="bg-zinc-800 rounded-xl shadow-sm p-6 mb-4">
+      <div className="bg-zinc-800 rounded-xl shadow-sm p-6">
         <div className="flex justify-between items-start mb-4">
           <div>
             <h3 className="font-medium text-neutral-200 mb-1 truncate pr-4">{audioFile.file.name}</h3>

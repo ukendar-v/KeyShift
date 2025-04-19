@@ -184,14 +184,8 @@ const useAudioProcessor = () => {
       sourceNode.current = audioContext.createBufferSource();
       sourceNode.current.buffer = audioBuffer;
       
-      // Apply tempo preservation if enabled
-      if (semitones !== 0) {
-        const pitchRatio = Math.pow(2, semitones / 12);
-        if (preserveTempo) {
-          // Preserve tempo by adjusting playback rate to counteract the pitch shift
-          sourceNode.current.playbackRate.value = pitchRatio;
-        }
-      }
+      // Remove playback rate adjustment - causing issues
+      // We'll handle tempo preservation in the buffer processing only
       
       // Create gain node if it doesn't exist
       if (!gainNode.current) {
@@ -208,14 +202,7 @@ const useAudioProcessor = () => {
       // Start playback from the desired position
       sourceNode.current.start(0, pausedAt.current);
       
-      // Add ended event listener to handle playback completion
-      sourceNode.current.onended = () => {
-        console.log('Playback ended naturally');
-        if (sourceNode.current) {
-          sourceNode.current.disconnect();
-          sourceNode.current = null;
-        }
-      };
+      // Remove onended event listener - causing issues with UI state
     } catch (error) {
       console.error('Error during audio playback:', error);
     }
@@ -257,10 +244,7 @@ const useAudioProcessor = () => {
       // Calculate current time based on audio context time
       let currentTime = audioContext.currentTime - startTime.current;
       
-      // Apply playback rate adjustment for accurate time display if preserving tempo
-      if (preserveTempo && sourceNode.current.playbackRate.value !== 1) {
-        currentTime *= sourceNode.current.playbackRate.value;
-      }
+      // No longer using playback rate adjustments for tempo preservation
       
       // Ensure time doesn't exceed duration or go below 0
       if (currentTime > audioBuffer.duration) {
