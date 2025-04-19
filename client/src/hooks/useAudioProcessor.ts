@@ -46,8 +46,7 @@ const useAudioProcessor = () => {
     }
   }, [audioContext]);
   
-  // Simple pitch shift implementation
-  // In a real app, this would use a more sophisticated algorithm
+  // Improved pitch shift implementation with normalization
   const transposeAudio = useCallback((semitones: number) => {
     if (!audioContext || !originalBuffer) return;
     
@@ -74,6 +73,26 @@ const useAudioProcessor = () => {
         case 'fast': windowSize = 0; break; // Basic resampling
         case 'balanced': windowSize = 4; break; // Some interpolation
         case 'high': windowSize = 8; break; // Better interpolation
+      }
+      
+      // Find the maximum amplitude in the original buffer for normalization reference
+      const originalMaxAmplitudes: number[] = [];
+      const newMaxAmplitudes: number[] = [];
+      
+      // First calculate the original max amplitudes per channel
+      for (let channel = 0; channel < originalBuffer.numberOfChannels; channel++) {
+        const inputData = originalBuffer.getChannelData(channel);
+        let maxAmplitude = 0;
+        
+        // Find the maximum amplitude in the original audio
+        for (let i = 0; i < inputData.length; i++) {
+          const absValue = Math.abs(inputData[i]);
+          if (absValue > maxAmplitude) {
+            maxAmplitude = absValue;
+          }
+        }
+        
+        originalMaxAmplitudes[channel] = maxAmplitude;
       }
       
       // Process each channel
@@ -108,6 +127,26 @@ const useAudioProcessor = () => {
             } else if (originalIndexFloor < originalBuffer.length) {
               outputData[i] = inputData[originalIndexFloor];
             }
+          }
+        }
+        
+        // Find the maximum amplitude in the processed audio for this channel
+        let maxAmplitude = 0;
+        for (let i = 0; i < outputData.length; i++) {
+          const absValue = Math.abs(outputData[i]);
+          if (absValue > maxAmplitude) {
+            maxAmplitude = absValue;
+          }
+        }
+        newMaxAmplitudes[channel] = maxAmplitude;
+        
+        // Normalize the output if it exceeds the original volume
+        if (maxAmplitude > originalMaxAmplitudes[channel] && maxAmplitude > 0) {
+          const normalizeRatio = originalMaxAmplitudes[channel] / maxAmplitude;
+          console.log(`Normalizing channel ${channel} by ratio ${normalizeRatio.toFixed(4)}`);
+          
+          for (let i = 0; i < outputData.length; i++) {
+            outputData[i] *= normalizeRatio;
           }
         }
       }
@@ -211,18 +250,21 @@ const useAudioProcessor = () => {
   };
 };
 
-// Function to export processed audio as a Blob
+// Function to export processed audio as a Blob with normalization
 const exportAudioBlob = async (audioContext: AudioContext, buffer: AudioBuffer): Promise<Blob> => {
+  // Create normalized buffer to prevent distortion
+  const normalizedBuffer = normalizeAudioBuffer(buffer);
+  
   // Create offline context for rendering
   const offlineContext = new OfflineAudioContext(
-    buffer.numberOfChannels,
-    buffer.length,
-    buffer.sampleRate
+    normalizedBuffer.numberOfChannels,
+    normalizedBuffer.length,
+    normalizedBuffer.sampleRate
   );
   
   // Create buffer source
   const source = offlineContext.createBufferSource();
-  source.buffer = buffer;
+  source.buffer = normalizedBuffer;
   source.connect(offlineContext.destination);
   source.start();
   
@@ -273,6 +315,48 @@ const exportAudioBlob = async (audioContext: AudioContext, buffer: AudioBuffer):
   }
   
   return new Blob([wavBuffer], { type: 'audio/wav' });
+};
+
+// Normalize the audio buffer to prevent distortion
+function normalizeAudioBuffer(buffer: AudioBuffer): AudioBuffer {
+  const numberOfChannels = buffer.numberOfChannels;
+  const length = buffer.length;
+  const sampleRate = buffer.sampleRate;
+  
+  // Create a new buffer for the normalized audio
+  const normalizedBuffer = new AudioContext().createBuffer(
+    numberOfChannels,
+    length,
+    sampleRate
+  );
+  
+  // Find the maximum amplitude across all channels
+  let maxAmplitude = 0;
+  for (let channel = 0; channel < numberOfChannels; channel++) {
+    const channelData = buffer.getChannelData(channel);
+    for (let i = 0; i < length; i++) {
+      const absValue = Math.abs(channelData[i]);
+      if (absValue > maxAmplitude) {
+        maxAmplitude = absValue;
+      }
+    }
+  }
+  
+  // If the max amplitude is above a safe threshold, normalize to prevent distortion
+  const targetAmplitude = 0.9; // 90% of maximum to ensure no clipping
+  const normalizeRatio = maxAmplitude > targetAmplitude ? targetAmplitude / maxAmplitude : 1;
+  
+  // Apply normalization
+  for (let channel = 0; channel < numberOfChannels; channel++) {
+    const inputData = buffer.getChannelData(channel);
+    const outputData = normalizedBuffer.getChannelData(channel);
+    
+    for (let i = 0; i < length; i++) {
+      outputData[i] = inputData[i] * normalizeRatio;
+    }
+  }
+  
+  return normalizedBuffer;
 };
 
 // Helper function to write a string to a DataView

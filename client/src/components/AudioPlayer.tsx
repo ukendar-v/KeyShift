@@ -85,6 +85,12 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioFile, onReset }) => {
       stopAudio();
       setIsPlaying(false);
     } else {
+      // If we've reached the end, start from the beginning
+      if (currentTime >= duration - 0.1) {
+        pausedAt.current = 0;
+        setCurrentTime(0);
+      }
+      
       playAudio(semitones);
       setIsPlaying(true);
     }
