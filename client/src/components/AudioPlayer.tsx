@@ -247,6 +247,8 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioFile, onReset }) => {
         onPreserveTempoChange={setPreserveTempo}
         audioQuality={audioQuality}
         onAudioQualityChange={(value: string) => setAudioQuality(value as 'fast' | 'balanced' | 'high')}
+        audioContext={audioContext}
+        audioBuffer={audioBuffer}
       />
     </div>
   );
