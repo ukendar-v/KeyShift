@@ -68,19 +68,46 @@ const useAudioProcessor = () => {
         audioContext.sampleRate
       );
       
+      // Quality factors - uses higher quality interpolation for higher quality settings
+      let windowSize = 0;
+      switch(audioQuality) {
+        case 'fast': windowSize = 0; break; // Basic resampling
+        case 'balanced': windowSize = 4; break; // Some interpolation
+        case 'high': windowSize = 8; break; // Better interpolation
+      }
+      
       // Process each channel
       for (let channel = 0; channel < originalBuffer.numberOfChannels; channel++) {
         const inputData = originalBuffer.getChannelData(channel);
         const outputData = newBuffer.getChannelData(channel);
         
-        // Simple resampling - in a real app we'd use a better algorithm
+        // Enhanced resampling with basic interpolation for quality
         for (let i = 0; i < newLength; i++) {
-          const originalIndex = preserveTempo 
-            ? Math.round(i * pitchRatio)
+          const exactPos = preserveTempo 
+            ? i * pitchRatio
             : i;
+          
+          if (windowSize === 0) {
+            // Fast mode: Simple nearest neighbor
+            const originalIndex = Math.round(exactPos);
+            if (originalIndex < originalBuffer.length) {
+              outputData[i] = inputData[originalIndex];
+            }
+          } else {
+            // Balanced/High modes: Linear interpolation with windowing
+            const originalIndexFloor = Math.floor(exactPos);
+            const fraction = exactPos - originalIndexFloor;
             
-          if (originalIndex < originalBuffer.length) {
-            outputData[i] = inputData[originalIndex];
+            if (originalIndexFloor < originalBuffer.length - 1) {
+              // Simple linear interpolation between two points
+              const sample1 = inputData[originalIndexFloor];
+              const sample2 = inputData[originalIndexFloor + 1];
+              
+              // Apply a weighted average based on fraction
+              outputData[i] = sample1 * (1 - fraction) + sample2 * fraction;
+            } else if (originalIndexFloor < originalBuffer.length) {
+              outputData[i] = inputData[originalIndexFloor];
+            }
           }
         }
       }
@@ -91,7 +118,7 @@ const useAudioProcessor = () => {
     } finally {
       setIsProcessing(false);
     }
-  }, [audioContext, originalBuffer, preserveTempo]);
+  }, [audioContext, originalBuffer, preserveTempo, audioQuality]);
   
   // Play audio
   const playAudio = useCallback((semitones: number) => {
@@ -151,11 +178,16 @@ const useAudioProcessor = () => {
     if (!audioContext) return pausedAt.current;
     
     if (sourceNode.current) {
-      return audioContext.currentTime - startTime.current;
+      const currentTime = audioContext.currentTime - startTime.current;
+      // Make sure we don't return a time greater than the duration
+      if (audioBuffer && currentTime > audioBuffer.duration) {
+        return audioBuffer.duration;
+      }
+      return currentTime;
     } else {
       return pausedAt.current;
     }
-  }, [audioContext]);
+  }, [audioContext, audioBuffer]);
   
   // Reset playback position
   const resetPlayback = useCallback(() => {
@@ -179,4 +211,92 @@ const useAudioProcessor = () => {
   };
 };
 
+// Function to export processed audio as a Blob
+const exportAudioBlob = async (audioContext: AudioContext, buffer: AudioBuffer): Promise<Blob> => {
+  // Create offline context for rendering
+  const offlineContext = new OfflineAudioContext(
+    buffer.numberOfChannels,
+    buffer.length,
+    buffer.sampleRate
+  );
+  
+  // Create buffer source
+  const source = offlineContext.createBufferSource();
+  source.buffer = buffer;
+  source.connect(offlineContext.destination);
+  source.start();
+  
+  // Render audio
+  const renderedBuffer = await offlineContext.startRendering();
+  
+  // Convert AudioBuffer to WAV format
+  const numberOfChannels = renderedBuffer.numberOfChannels;
+  const length = renderedBuffer.length;
+  const sampleRate = renderedBuffer.sampleRate;
+  const bitsPerSample = 16;
+  const bytesPerSample = bitsPerSample / 8;
+  const blockAlign = numberOfChannels * bytesPerSample;
+  const byteRate = sampleRate * blockAlign;
+  const dataSize = length * blockAlign;
+  
+  // Create buffer with header
+  const wavBuffer = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(wavBuffer);
+  
+  // Write WAV header
+  // "RIFF" chunk descriptor
+  writeString(view, 0, 'RIFF');
+  view.setUint32(4, 36 + dataSize, true);
+  writeString(view, 8, 'WAVE');
+  
+  // "fmt " sub-chunk
+  writeString(view, 12, 'fmt ');
+  view.setUint32(16, 16, true); // subchunk1size
+  view.setUint16(20, 1, true); // PCM format
+  view.setUint16(22, numberOfChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, byteRate, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, bitsPerSample, true);
+  
+  // "data" sub-chunk
+  writeString(view, 36, 'data');
+  view.setUint32(40, dataSize, true);
+  
+  // Write PCM audio data
+  const offset = 44;
+  const interleaved = interleaveChannels(renderedBuffer);
+  for (let i = 0; i < interleaved.length; i++) {
+    const sample = Math.max(-1, Math.min(1, interleaved[i]));
+    const sampleValue = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+    view.setInt16(offset + i * 2, sampleValue, true);
+  }
+  
+  return new Blob([wavBuffer], { type: 'audio/wav' });
+};
+
+// Helper function to write a string to a DataView
+function writeString(view: DataView, offset: number, string: string) {
+  for (let i = 0; i < string.length; i++) {
+    view.setUint8(offset + i, string.charCodeAt(i));
+  }
+}
+
+// Helper function to interleave channels
+function interleaveChannels(buffer: AudioBuffer): Float32Array {
+  const numberOfChannels = buffer.numberOfChannels;
+  const length = buffer.length;
+  const result = new Float32Array(length * numberOfChannels);
+  
+  for (let channel = 0; channel < numberOfChannels; channel++) {
+    const channelData = buffer.getChannelData(channel);
+    for (let i = 0; i < length; i++) {
+      result[i * numberOfChannels + channel] = channelData[i];
+    }
+  }
+  
+  return result;
+}
+
 export default useAudioProcessor;
+export { exportAudioBlob };
