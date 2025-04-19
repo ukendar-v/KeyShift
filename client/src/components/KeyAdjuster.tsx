@@ -18,21 +18,21 @@ const KeyAdjuster: React.FC<KeyAdjusterProps> = ({ semitones, onSemitonesChange 
   };
   
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6 mb-4">
-      <h3 className="font-medium mb-5 text-center">Change Key by Semitones</h3>
+    <div className="bg-zinc-800 rounded-xl shadow-sm p-6 mb-4">
+      <h3 className="font-medium mb-5 text-center text-neutral-200">Change Key by Semitones</h3>
       
       <div className="mb-6">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs text-neutral-500">-6</span>
-          <span className="text-xs font-medium">
+          <span className="text-xs text-neutral-400">-12</span>
+          <span className="text-xs font-medium text-neutral-300">
             Current: <span className="text-primary">{semitones > 0 ? `+${semitones}` : semitones}</span>
           </span>
-          <span className="text-xs text-neutral-500">+6</span>
+          <span className="text-xs text-neutral-400">+12</span>
         </div>
         <Slider
           value={[semitones]}
-          min={-6}
-          max={6}
+          min={-12}
+          max={12}
           step={1}
           onValueChange={handleSliderChange}
           className="w-full"
@@ -43,8 +43,10 @@ const KeyAdjuster: React.FC<KeyAdjusterProps> = ({ semitones, onSemitonesChange 
         {predefinedValues.map((value) => (
           <button 
             key={value}
-            className={`text-center py-2 border border-neutral-200 rounded-lg text-sm hover:bg-neutral-100 transition-colors ${
-              value === semitones ? 'font-medium text-primary' : ''
+            className={`text-center py-2 border rounded-lg text-sm transition-colors ${
+              value === semitones 
+                ? 'border-primary text-primary bg-primary/10' 
+                : 'border-zinc-700 text-neutral-300 hover:bg-zinc-700'
             }`}
             onClick={() => handlePresetClick(value)}
           >

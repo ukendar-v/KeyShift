@@ -36,6 +36,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioFile, onReset }) => {
   } = useAudioProcessor();
 
   const progressInterval = useRef<number | null>(null);
+  const pausedAt = useRef<number>(0);
 
   useEffect(() => {
     loadAudio(audioFile.file);
@@ -57,7 +58,16 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioFile, onReset }) => {
   useEffect(() => {
     if (isPlaying) {
       progressInterval.current = window.setInterval(() => {
-        setCurrentTime(currentPlaybackTime());
+        const currentPlaybackTimeValue = currentPlaybackTime();
+        setCurrentTime(currentPlaybackTimeValue);
+        
+        // Stop playback when audio reaches the end
+        if (duration > 0 && currentPlaybackTimeValue >= duration - 0.1) {
+          stopAudio();
+          setIsPlaying(false);
+          setCurrentTime(0);
+          pausedAt.current = 0;
+        }
       }, 100);
     } else if (progressInterval.current) {
       window.clearInterval(progressInterval.current);
@@ -68,7 +78,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioFile, onReset }) => {
         window.clearInterval(progressInterval.current);
       }
     };
-  }, [isPlaying, currentPlaybackTime]);
+  }, [isPlaying, currentPlaybackTime, duration, stopAudio]);
 
   const togglePlayback = () => {
     if (isPlaying) {
