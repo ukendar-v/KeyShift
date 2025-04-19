@@ -7,7 +7,7 @@ interface KeyAdjusterProps {
 }
 
 const KeyAdjuster: React.FC<KeyAdjusterProps> = ({ semitones, onSemitonesChange }) => {
-  const predefinedValues = [-6, -3, 0, 3, 6];
+  const predefinedValues = [-12, -6, 0, 6, 12];
   
   const handleSliderChange = (value: number[]) => {
     onSemitonesChange(value[0]);

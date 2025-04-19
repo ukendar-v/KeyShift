@@ -45,12 +45,12 @@ const Home: React.FC = () => {
   };
 
   return (
-    <div className="bg-neutral-50 text-neutral-800 min-h-screen">
+    <div className="bg-zinc-900 text-neutral-100 min-h-screen">
       <div className="max-w-md mx-auto px-4 py-8">
         {/* Header */}
         <header className="text-center mb-8">
           <h1 className="text-3xl font-bold text-primary mb-2">KeyShift</h1>
-          <p className="text-lg text-neutral-600">Upload a Song. Change Its Key. Hear the Difference.</p>
+          <p className="text-lg text-neutral-400">Upload a song. Change the key. Hear the difference.</p>
           <p className="text-sm text-neutral-500 mt-1">No account needed. Works right from your phone.</p>
         </header>
 
@@ -61,14 +61,14 @@ const Home: React.FC = () => {
 
         {/* Loading State */}
         {isLoading && (
-          <div className="bg-white rounded-xl shadow-sm p-6 text-center">
+          <div className="bg-zinc-800 rounded-xl shadow-sm p-6 text-center">
             <div className="flex items-center justify-center mb-4">
               <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
             </div>
-            <h3 className="font-medium text-neutral-700 mb-2">
+            <h3 className="font-medium text-neutral-200 mb-2">
               {audioFile?.file.name || "Uploading..."}
             </h3>
-            <p className="text-sm text-neutral-500">Analyzing audio and detecting key...</p>
+            <p className="text-sm text-neutral-400">Analyzing audio and detecting key...</p>
           </div>
         )}
 

@@ -142,16 +142,16 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioFile, onReset }) => {
   return (
     <div>
       {/* File Info & Player */}
-      <div className="bg-white rounded-xl shadow-sm p-6 mb-4">
+      <div className="bg-zinc-800 rounded-xl shadow-sm p-6 mb-4">
         <div className="flex justify-between items-start mb-4">
           <div>
-            <h3 className="font-medium text-neutral-700 mb-1 truncate pr-4">{audioFile.file.name}</h3>
+            <h3 className="font-medium text-neutral-200 mb-1 truncate pr-4">{audioFile.file.name}</h3>
             <div className="flex flex-wrap gap-2">
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-neutral-100 text-neutral-700">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-zinc-700 text-neutral-200">
                 <i className="ri-music-line mr-1"></i>
                 Original Key: <span className="ml-1 font-semibold">{audioFile.originalKey}</span>
               </span>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary/10 text-secondary">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/20 text-primary-foreground">
                 <i className="ri-equalizer-line mr-1"></i>
                 New Key: <span className="ml-1 font-semibold">{transposedKey}</span>
               </span>
@@ -159,7 +159,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioFile, onReset }) => {
           </div>
           <button 
             onClick={onReset}
-            className="text-neutral-400 hover:text-neutral-700 transition-colors"
+            className="text-neutral-400 hover:text-neutral-200 transition-colors"
           >
             <i className="ri-refresh-line text-lg"></i>
           </button>
@@ -170,13 +170,28 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioFile, onReset }) => {
         
         {/* Playback Progress */}
         <div className="mb-6">
-          <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
+          <div 
+            className="h-2 bg-zinc-700 rounded-full overflow-hidden cursor-pointer"
+            onClick={(e) => {
+              if (audioBuffer) {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const clickPos = (e.clientX - rect.left) / rect.width;
+                const newTime = clickPos * duration;
+                setCurrentTime(newTime);
+                pausedAt.current = newTime;
+                if (isPlaying) {
+                  stopAudio();
+                  playAudio(semitones);
+                }
+              }
+            }}
+          >
             <div 
               className="h-full bg-primary rounded-full" 
               style={{ width: `${(currentTime / (duration || 1)) * 100}%` }}
             ></div>
           </div>
-          <div className="flex justify-between text-xs text-neutral-500 mt-1">
+          <div className="flex justify-between text-xs text-neutral-400 mt-1">
             <span>{formatTime(currentTime)}</span>
             <span>{formatTime(duration)}</span>
           </div>
@@ -185,23 +200,27 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioFile, onReset }) => {
         {/* Playback Controls */}
         <div className="flex justify-center items-center gap-4">
           <button 
-            className="w-10 h-10 flex items-center justify-center text-neutral-700 hover:text-primary transition-colors" 
+            className="w-10 h-10 flex items-center justify-center text-neutral-300 hover:text-primary transition-colors" 
             onClick={skipBackward}
           >
-            <i className="ri-skip-back-line text-xl"></i>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line></svg>
           </button>
           <button 
-            className={`w-14 h-14 rounded-full ${isProcessing ? 'bg-neutral-300' : 'bg-primary'} text-white flex items-center justify-center shadow-sm hover:bg-primary/90 transition-colors`}
+            className={`w-14 h-14 rounded-full ${isProcessing ? 'bg-zinc-600' : 'bg-primary'} text-white flex items-center justify-center shadow-sm hover:bg-primary/90 transition-colors`}
             onClick={togglePlayback}
             disabled={isProcessing}
           >
-            <i className={`${isPlaying ? 'ri-pause-fill' : 'ri-play-fill'} text-2xl`}></i>
+            {isPlaying ? (
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6 ml-1"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            )}
           </button>
           <button 
-            className="w-10 h-10 flex items-center justify-center text-neutral-700 hover:text-primary transition-colors" 
+            className="w-10 h-10 flex items-center justify-center text-neutral-300 hover:text-primary transition-colors" 
             onClick={skipForward}
           >
-            <i className="ri-skip-forward-line text-xl"></i>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>
           </button>
         </div>
       </div>
